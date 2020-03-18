@@ -27,9 +27,13 @@ US-100 has good reviews, but angle is given as 15° (but is this +- 15° or +- 7
 
 #### lighting
 
+LED + hazer
+
 * https://www.wired.com/2016/03/obsessive-quest-worlds-sharpest-led-spotlight/
 
 4° LED spot is top, more realistic for consumer maybe 6-10°?
+
+needs *hard* light source (https://www.youtube.com/watch?v=yhmkt_HYTVs)
 
 #### control/switching
 
@@ -53,3 +57,7 @@ If US-100 (with serial interface) turns out to be best, could use one of several
 setup/detection:
 
 * on startup, unit reads all distances as "default" values, set a "detection" threshold of the first value minus 20?
+
+### ultrasonic sensor readouts
+
+The Serial interface of the US-100 and even the PWM one (reading distance using `pulseIn()` with a threshold timeout) are nice, but take/block too long when there is more than one sensor on the Arduino (see `pwm.ino` code). Since we are not interested in the precise distance at all but just want to decide ASAP if the threshold has been undercut, simply sending the (staged) triggers of all sensors and waiting for the onset of a response using interrupts (and checking the time elapsed since the trigger) should make for the fastest and only version that allows staging/interleaving. (Only works on the Mega because Uno etc only have 2 interrupt pins.)
