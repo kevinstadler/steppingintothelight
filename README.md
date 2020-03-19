@@ -61,3 +61,10 @@ setup/detection:
 ### ultrasonic sensor readouts
 
 The Serial interface of the US-100 and even the PWM one (reading distance using `pulseIn()` with a threshold timeout) are nice, but take/block too long when there is more than one sensor on the Arduino (see `pwm.ino` code). Since we are not interested in the precise distance at all but just want to decide ASAP if the threshold has been undercut, simply sending the (staged) triggers of all sensors and waiting for the onset of a response using interrupts (and checking the time elapsed since the trigger) should make for the fastest and only version that allows staging/interleaving. (Only works on the Mega because Uno etc only have 2 interrupt pins.)
+
+### interrupt-based on Uno:
+
+HW interrupt: 2+3
+Pin Change Interrupt: 8-13 port, 14-19 (=A0-A5) port
+LED control: 4, 5, 6, 7
+
