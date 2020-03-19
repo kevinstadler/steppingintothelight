@@ -9,17 +9,19 @@ const int LEDS[] = { 4, 5, 6, 7 };
 
 // add resistance to fluctuating measurements:
 // how many consecutive 'on' or 'off' triggers required to switch?
-const int CONSECUTIVE_ONOFFS[] = { 2, 2 };
+const int CONSECUTIVE_ONOFFS[] = { 4, 2 };
 // 0: be conservative with turning on again
 // 1: (almost) immediately turn off after receiving under-threshold values
 
 
 // LED control variables
 bool ledStatus[N];
-// add hysteresis
+// add hysteresis for error/timeout reads
 byte readsUntilSwitch[N];
 // time from trigger until echo onset exceed 40.000
 int distanceThresholds[N];
+// 20.000 ~ 2m
+const int LIMIT = 1000;
 
 volatile unsigned long triggers[N];
 
@@ -34,19 +36,25 @@ void sound(int i) {
 void loop() {
   for (int i = 0; i < N; i++) {
     sound(i);
+    // 10 works at 2m, at 9 there are already early echoes
+    delay(10);
   }
-  delay(100);
 }
 
 void echo(int i) {
   long elapsed = micros() - triggers[i];
   // 3 cases: 
   // 1. smaller than threshold, turn off
-  // 2. error (80000+ response), turn off
+  // 2. error (80000+ response), turn off (with hysteresis)
   // 3. in between that: clear view, keep on
   unsigned long diff = abs(elapsed - distanceThresholds[i]);
-  // random variation can be up to 1200? 
-  bool clearView = diff < 1200;
+
+  bool clearView = diff < 1000;
+  if (!clearView) {
+//    Serial.println(i);
+//    Serial.println(diff);
+//    Serial.println(elapsed - distanceThresholds[i]);
+  }
   if (ledStatus[i] == clearView) {
     readsUntilSwitch[i] = CONSECUTIVE_ONOFFS[clearView];
   } else {
@@ -54,7 +62,6 @@ void echo(int i) {
       readsUntilSwitch[i]--;
     } else {
       setLED(i, clearView);
-      readsUntilSwitch[i] = CONSECUTIVE_ONOFFS[clearView];
     }
   }
   // TODO if elapsed > 80000 (read error/interrupt) and number of
@@ -99,16 +106,18 @@ void setup() {
       }
     }
 
+    Serial.println(distanceThresholds[i]);
     attachEchoInterrupt(i, callbacks[i]);
   }
 
   digitalWrite(LED_BUILTIN, LOW);
 }
 
-void setLED(int ledId, bool state) {
-  ledStatus[ledId] = state;
-  digitalWrite(LEDS[ledId], state);
-//  analogWrite(LEDS[ledId], state * 127);
+void setLED(int i, bool state) {
+  ledStatus[i] = state;
+  digitalWrite(LEDS[i], state);
+//  analogWrite(LEDS[i], state * 127);
+  readsUntilSwitch[i] = CONSECUTIVE_ONOFFS[state];
 }
 
 void attachEchoInterrupt(byte i, void(*function)(void)) {
