@@ -44,7 +44,7 @@ The opto-coupled switch circuits will require 5V control (not 3.3 like newer Ard
 If US-100 (with serial interface) turns out to be best, could use one of several Arduinos to control it
 
 * Arduino Mega (4 hardware serial ports)
-* Arduino Uno, .... (1 hardware + 3 software serial ports, possible on any pin that supports pin change interrupt)
+* Arduino Uno, .... (1 hardware + 3 software serial *ports*, possible on any pin that supports pin change interrupt)
 * ESP8266? (if I want/need Wifi support for some reason)
 
 ### design considerations
@@ -60,11 +60,14 @@ setup/detection:
 
 ### ultrasonic sensor readouts
 
-The Serial interface of the US-100 and even the PWM one (reading distance using `pulseIn()` with a threshold timeout) are nice, but take/block too long when there is more than one sensor on the Arduino (see `pwm.ino` code). Since we are not interested in the precise distance at all but just want to decide ASAP if the threshold has been undercut, simply sending the (staged) triggers of all sensors and waiting for the onset of a response using interrupts (and checking the time elapsed since the trigger) should make for the fastest and only version that allows staging/interleaving. (Only works on the Mega because Uno etc only have 2 interrupt pins.)
+#### US-100
 
-### interrupt-based on Uno:
+The Serial interface of the US-100 and even the PWM one (reading distance using `pulseIn()` with a threshold timeout) are nice, but take/block too long when there is more than one sensor on the Arduino (see `pwm.ino` code). Since we are not interested in the precise distance at all but just want to decide ASAP if the threshold has been undercut, simply sending the (staged) triggers of all sensors and waiting for the onset of a response using interrupts (and checking the time elapsed since the trigger) should make for the fastest and only version that allows staging/interleaving.
 
-HW interrupt: 2+3
-Pin Change Interrupt: 8-13 port, 14-19 (=A0-A5) port
-LED control: 4, 5, 6, 7
+On the Mega this works great using the 4 hardware interrupt pins, but there was a weird bug where the Ground and Voltage towards the sensor need to be attached to the same group/set of pins on the sensor board as the *echo* pin, when the reference voltage came from the *trigger* pin set there was no interrupt on the echo. Weird.
 
+Using a library like `EnableInterrupt` it's also possible to use 
+
+#### US-015 / US-026
+
+The older (cheaper) US-015 sensors are triggered in the same way (10+us on the trigger pin), but they go *HIGH* as soon as they have sent out their signal (about 2000us or so) and *LOW* again when the receive their echo. Added some code to dynamically switch to interrupts on *FALLING* transitions during the sketch setup/calibration. Based on first tests the US-015 and US-026 still seem weird/buggy/less robust than the US-100 with the same code.
